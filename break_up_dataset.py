@@ -107,6 +107,12 @@ plt.savefig(working_path + 'Images/both_records_by_month.png')
 # calculate response time
 table_df['Response Time'] = table_df['On Scene DtTm'] - table_df['Received DtTm']
 
+# look at negatives
+my_filter = table_df['Response Time'] < pd.to_timedelta(0)
+negatives = table_df[my_filter]
+negatives.shape
+negatives.to_csv(working_path + 'Data/negative_response_time.csv')
+
 # build three timestamp for comparison
 # range 1 should be from 1/1/2018 to 3/16/2020
 # range 2 should be from 3/17/2020 to 6/15/2021
@@ -129,6 +135,6 @@ post_lock_df = pd.DataFrame(table_df[post_lock_filter])
 # total records is 1535032
 # all records accounted for
 
-pre_lock_df.to_csv(working_path + 'Data/Pre_lock_2018_2023.csv')
-in_lock_df.to_csv(working_path + 'Data/In_lock_2018_2023.csv')
-post_lock_df.to_csv(working_path + 'Data/Post_lock_2018_2023.csv')
+pre_lock_df.to_csv(working_path + 'Data/pre_lock_2018_2023.csv')
+in_lock_df.to_csv(working_path + 'Data/in_lock_2018_2023.csv')
+post_lock_df.to_csv(working_path + 'Data/post_lock_2018_2023.csv')
