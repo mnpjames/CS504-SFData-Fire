@@ -8,15 +8,14 @@ import sklearn.metrics
 # Unit Type: one hot encoded into 12 columns
 # later: Add Received DtTm but needs to be turned into a numeric time of day
 columns_for_trial = ['Unit sequence in call dispatch', 'Battalion', 'Unit Type', 'Response Time']
-drop_negative_response_times = False  # need to code this
 
 def show_mean_squared_error(y_actual, y_predicted):
     mse_metric = sklearn.metrics.mean_squared_error(y_actual, y_predicted)
-    status_string = f'Mean Squared Error: {mse_metric}'
+    status_string = f'Mean Squared Error: {mse_metric}\n'
     print(status_string)
     results.append(status_string)
     metric_r_squared = sklearn.metrics.r2_score(y_actual, y_predicted)
-    status_string = f'R-sqared: {metric_r_squared}'
+    status_string = f'R-sqared: {metric_r_squared}\n'
     print(status_string)
     results.append(status_string)
 
@@ -25,10 +24,10 @@ def fit_model_for_intercept_type(intercept_type, x_items, y_items):
 
     model = LinearRegression(fit_intercept=intercept_type)
     clf = model.fit(x_items, y_items)
-    status_string = f'Coefficient: {clf.coef_}'
+    status_string = f'Coefficient: {clf.coef_}\n'
     print(status_string)
     results.append(status_string)
-    status_string = f'Intercept: {clf.intercept_}'
+    status_string = f'Intercept: {clf.intercept_}\n'
     print(status_string)
     results.append(status_string)
 
@@ -44,31 +43,54 @@ column_processing = {
 # set the columns we are using for this trial
 
 results = []
-status_string = f'\nSetting up trials for this column list: {columns_for_trial}'
+status_string = f'\nSetting up trials for this column list: {columns_for_trial}\n'
 print(status_string)
 results.append(status_string)
 
 # read in the columns we want from the three datasets
-print(f'Read in three datasets for 2018-2023')
+status_string = f'Read in three datasets for 2018-2023'
+print(status_string)
+results.append(status_string)
+
 working_path = "/Users/michelle/Data/CS504/Project/"
 set_prefixes = ['pre', 'in', 'post']
 dfs = { }
 
 for set_prefix in set_prefixes:
     stored_dataset_path = working_path + 'Data/' + set_prefix + '_lock_2018_2023.csv'
-    status_string = f'Reading columns for {stored_dataset_path}'
+    status_string = f'Reading columns for {stored_dataset_path}\n'
     print(status_string)
     results.append(status_string)
     dfs[set_prefix] = pd.read_csv(stored_dataset_path, usecols=columns_for_trial)
 
+# set up response time as a timedelta
 for set_prefix in set_prefixes:
-    # one hot encoding for PRE
+    status_string = f'Changing dependent variable timedelta to number of seconds for {set_prefix}\n'
+    print(status_string)
+    results.append(status_string)
+    dfs[set_prefix]['Response Time'] = pd.to_timedelta(dfs[set_prefix]['Response Time']) / pd.to_timedelta(1, unit='s')
+    status_string = f'Response Time stats for {set_prefix}\n'
+    print(status_string)
+    results.append(status_string)
+    status_string = f'count, mean, std, min, 1Q, 2Q, 3Q, max\n'
+    print(status_string)
+    results.append(status_string)
+    # status_string = " ".join(list(dfs[set_prefix]['Response Time'].describe()))
+    status_string = ""
+    describe_results = list(dfs[set_prefix]['Response Time'].describe())
+    for item in describe_results:
+        status_string += str(item) + ", "
 
+    print(status_string)
+    results.append(status_string)
+
+# set up one hot encoding as necessary
+for set_prefix in set_prefixes:
     for column in columns_for_trial:
         if column_processing[column] == 'one-hot-encoding':
             column_prefix = column[0:4]
 
-            status_string = f'Setting up one-hot encoding for {column} in {set_prefix} with prefix {column_prefix}'
+            status_string = f'Setting up one-hot encoding for {column} in {set_prefix} with prefix {column_prefix}\n'
             print(status_string)
             results.append(status_string)
 
@@ -76,27 +98,9 @@ for set_prefix in set_prefixes:
             dfs[set_prefix].drop(column, axis='columns', inplace=True)
             dfs[set_prefix] = dfs[set_prefix].join(one_hot_temp_df)
 
-# set up response time as a timedelta
-# and drop original column that is no longer needed
-for set_prefix in set_prefixes:
-    status_string = f'Changing dependent variable timedelta to number of seconds for {set_prefix}'
-    print(status_string)
-    results.append(status_string)
-    dfs[set_prefix]['Response Time'] = pd.to_timedelta(dfs[set_prefix]['Response Time']) / pd.to_timedelta(1, unit='s')
-
-# There seem to be 74 records with a negative response time, which seems weird.
-# my_filter = dfs['pre']['Response Unit'] < 0
-# negatives = dfs['pre'][my_filter]
-# Handle here by dropping them if true
-if not drop_negative_response_times:
-    status_string = f'Keeping negative response times'
-else:
-    status_string = f'Need to code the dropping of negative response times'
-print(status_string)
-results.append(status_string)
 
 for set_prefix in set_prefixes:
-    status_string = f'Setting up variables for {set_prefix}'
+    status_string = f'Setting up variables for {set_prefix}\n'
     print(status_string)
     results.append(status_string)
     column_list = dfs[set_prefix].columns.to_list()
@@ -107,9 +111,9 @@ for set_prefix in set_prefixes:
 
     for fit_intercept in [True, False]:
         if fit_intercept:
-            status_string = f'Setting up regression for {set_prefix} with intercept fitting'
+            status_string = f'Setting up regression for {set_prefix} with intercept fitting\n'
         else:
-            status_string = f'Setting up regression for {set_prefix} without intercept fitting'
+            status_string = f'Setting up regression for {set_prefix} without intercept fitting\n'
         print(status_string)
         results.append(status_string)
         fit_model_for_intercept_type(fit_intercept, X, y)

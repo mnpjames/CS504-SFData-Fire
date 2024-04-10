@@ -1,4 +1,3 @@
-import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 working_path = "/Users/michelle/Data/CS504/Project/"
@@ -12,6 +11,7 @@ full_subset_name = working_path + subset_file
 # <input>:1: DtypeWarning: Columns (19,20,25) have mixed types.
 # #Specify dtype option on import or set low_memory=False.
 table_df = pd.read_csv(full_subset_name)
+print(f'Shape of original table is {table_df.shape}')
 
 print(f'Fix date formats from csv file')
 table_df['Call Date'] = pd.to_datetime(table_df['Call Date'], format='%Y-%m-%d')
@@ -50,69 +50,64 @@ table_df['Available DtTm'].isnull().sum()
 print(f'Pull off null values')
 null_filter = table_df['On Scene DtTm'].isnull()
 null_df = pd.DataFrame(table_df[null_filter])
-null_df.shape
+print(f'Shape of null table is {null_df.shape}')
 
+# store the dataframe with the null values for On Scene DtTm
 null_file_path = working_path + 'Data/null_records.csv'
 null_df.to_csv(null_file_path)
 
-
-print(f'Plot the counts by time of the null values')
-# plot the records with null OnSceneDtTm values to see whether they are concentrated
-# call_year_sr = null_df['Call Year'].value_counts(sort=False, ascending=True)
-# call_year_sr.sort_index(inplace=True)
-
-null_df['Index Date'] = null_df['Call Date'].dt.year.map(str)+ '-' + null_df['Call Date'].dt.month.map(str)
-null_df['Index Date'] = pd.to_datetime(null_df['Index Date'], format='%Y-%m').dt.strftime('%Y-%m')
-
-null_df_sr = null_df['Index Date'].value_counts(sort=False, ascending=True)
-null_df_sr.sort_index(inplace=True)
-
-fig, ax = plt.subplots()
-ax.plot(null_df_sr)
-ax.set_title('Null Records by Month')
-ax.set_xlabel('Month')
-ax.set_ylabel('Record Count')
-plt.xticks(rotation=90)
-plt.tight_layout()
-plt.savefig(working_path + 'Images/null_records_by_month.png')
-
-# I should come back and plot the value counts of the null records
-# against the value counts of the not-null records and show the
-# trends are the same
-
-# now get the dataset without any of the null values and
-# plot the counts by month to determine where to do the
-# cutoffs for the different models
-
+# drop the null value rows from the main dataframe
 table_df.dropna(axis='index', subset=['On Scene DtTm'], inplace=True)
-table_df['Index Date'] = table_df['Call Date'].dt.year.map(str)+ '-' + table_df['Call Date'].dt.month.map(str)
-table_df['Index Date'] = pd.to_datetime(table_df['Index Date'], format='%Y-%m').dt.strftime('%Y-%m')
-
-table_df_sr = table_df['Index Date'].value_counts(sort=False, ascending=True)
-table_df_sr.sort_index(inplace=True)
-
-fig, ax = plt.subplots()
-ax.plot(table_df_sr)
-ax.set_title('Valid Records by Month')
-ax.set_xlabel('Month')
-ax.set_ylabel('Record Count')
-plt.xticks(rotation=90)
-plt.tight_layout()
-plt.savefig(working_path + 'Images/valid_records_by_month.png')
-
-
-ax.plot(null_df_sr)
-plt.savefig(working_path + 'Images/both_records_by_month.png')
+print(f'New shape of base table is {table_df.shape}')
 
 # calculate response time
 table_df['Response Time'] = table_df['On Scene DtTm'] - table_df['Received DtTm']
 
+# break off negatives and drop them from the dataset as with nulls
 # look at negatives
-my_filter = table_df['Response Time'] < pd.to_timedelta(0)
-negatives = table_df[my_filter]
-negatives.shape
-negatives.to_csv(working_path + 'Data/negative_response_time.csv')
+negative_filter = table_df['Response Time'] < pd.to_timedelta(0)
+negative_df = table_df[negative_filter]
+print(f'Shape of negative time table is {negative_df.shape}')
+negative_df.to_csv(working_path + 'Data/negative_response_time.csv')
 
+valid_filter = table_df['Response Time'] >= pd.to_timedelta(0)
+table_df = table_df[valid_filter]
+print(f'Final shape of base table is {table_df.shape}')
+
+# plot the records with null OnSceneDtTm values to see whether they are concentrated
+print(f'Plot the counts by time of the null and non-null values')
+
+# create a series of counts for null value records by month
+null_df['Index Date'] = null_df['Call Date'].dt.year.map(str)+ '-' + null_df['Call Date'].dt.month.map(str)
+null_df['Index Date'] = pd.to_datetime(null_df['Index Date'], format='%Y-%m').dt.strftime('%Y-%m')
+null_df_sr = null_df['Index Date'].value_counts(sort=False, ascending=True)
+null_df_sr.sort_index(inplace=True)
+
+# create a series of counts for negative value records by month
+negative_df['Index Date'] = negative_df['Call Date'].dt.year.map(str)+ '-' + negative_df['Call Date'].dt.month.map(str)
+negative_df['Index Date'] = pd.to_datetime(negative_df['Index Date'], format='%Y-%m').dt.strftime('%Y-%m')
+negative_df_sr = null_df['Index Date'].value_counts(sort=False, ascending=True)
+negative_df_sr.sort_index(inplace=True)
+
+# create a series of counts for positive, valid records by month
+table_df['Index Date'] = table_df['Call Date'].dt.year.map(str)+ '-' + table_df['Call Date'].dt.month.map(str)
+table_df['Index Date'] = pd.to_datetime(table_df['Index Date'], format='%Y-%m').dt.strftime('%Y-%m')
+table_df_sr = table_df['Index Date'].value_counts(sort=False, ascending=True)
+table_df_sr.sort_index(inplace=True)
+
+fig, ax = plt.subplots()
+ax.plot(table_df_sr, color="blue", label="valid")
+ax.plot(negative_df_sr, color="green", label="negative")
+ax.plot(null_df_sr, color="red", label="null")
+ax.set_title('Records with Different Response Time Categories')
+ax.set_xlabel('Month', fontsize=8)
+ax.set_ylabel('Record Count')
+plt.legend()
+plt.xticks(rotation=90)
+plt.tight_layout()
+plt.savefig(working_path + 'Images/records_by_month.png')
+
+# break out three datasets by time
 # build three timestamp for comparison
 # range 1 should be from 1/1/2018 to 3/16/2020
 # range 2 should be from 3/17/2020 to 6/15/2021
@@ -126,14 +121,19 @@ post_lock_filter = (table_df['Call Date'] > second_break_dtm)
 
 # make the tables
 pre_lock_df = pd.DataFrame(table_df[pre_lock_filter])
-# this one has 567361 records
+print(f'Final shape of pre-lockdown table is {pre_lock_df.shape}')
+# this one has 567327 records
 in_lock_df = pd.DataFrame(table_df[in_lock_filter])
-# this one has 280026 records
+print(f'Final shape of in-lockdown table is {in_lock_df.shape}')
+# this one has 280012 records
 post_lock_df = pd.DataFrame(table_df[post_lock_filter])
-# this one has 687645 records
+print(f'Final shape of post-lockdown table is {post_lock_df.shape}')
+# this one has 687619 records
 
-# total records is 1535032
-# all records accounted for
+# total records is 1534958
+# 74 removed for being negative response time
+# 375611 removed for having null value so no response time could be calculated
+# all records accounted for from original set of 1910643
 
 pre_lock_df.to_csv(working_path + 'Data/pre_lock_2018_2023.csv')
 in_lock_df.to_csv(working_path + 'Data/in_lock_2018_2023.csv')
