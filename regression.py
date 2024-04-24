@@ -1,17 +1,28 @@
 from datetime import datetime
 import pandas as pd
-from sklearn.linear_model import LinearRegression
+# from sklearn.linear_model import LinearRegression
+from sklearn.linear_model import Ridge
 import sklearn.metrics
 
 # Unit sequence in call dispatch (already numeric)
 # Battalion: one hot encoded into 17 columns
 # Unit Type: one hot encoded into 12 columns
 # later: Add Received DtTm but needs to be turned into a numeric time of day
+# Linear: Battalion & Station Area done; Box took too much memory
+# 01: columns_for_trial = ['Unit sequence in call dispatch', 'Battalion', 'Unit Type', 'Response Time']
+# 02: columns_for_trial = ['Unit sequence in call dispatch', 'Station Area', 'Unit Type', 'Response Time']
+# 03: columns_for_trial = ['Unit sequence in call dispatch', 'Neighborhooods - Analysis Boundary', 'Unit Type', 'Response Time']
+# 04: columns_for_trial = ['Unit sequence in call dispatch', 'Box', 'Unit Type', 'Response Time']
+
 columns_for_trial = ['Unit sequence in call dispatch', 'Battalion', 'Unit Type', 'Response Time']
 
 def show_mean_squared_error(y_actual, y_predicted):
     mse_metric = sklearn.metrics.mean_squared_error(y_actual, y_predicted)
     status_string = f'Mean Squared Error: {mse_metric}\n'
+    print(status_string)
+    rmse_metric = sklearn.metrics.root_mean_squared_error(y_actual, y_predicted)
+    results.append(status_string)
+    status_string = f'Root Mean Squared Error: {rmse_metric}\n'
     print(status_string)
     results.append(status_string)
     metric_r_squared = sklearn.metrics.r2_score(y_actual, y_predicted)
@@ -22,7 +33,8 @@ def show_mean_squared_error(y_actual, y_predicted):
 
 def fit_model_for_intercept_type(intercept_type, x_items, y_items):
 
-    model = LinearRegression(fit_intercept=intercept_type)
+    # model = LinearRegression(fit_intercept=intercept_type)
+    model = Ridge(fit_intercept=intercept_type)
     clf = model.fit(x_items, y_items)
     status_string = f'Coefficient: {clf.coef_}\n'
     print(status_string)
@@ -35,10 +47,13 @@ def fit_model_for_intercept_type(intercept_type, x_items, y_items):
     show_mean_squared_error(y, predictions)
 
 column_processing = {
-    'Unit sequence in call dispatch': None,
     'Battalion': 'one-hot-encoding',
-    'Unit Type': 'one-hot-encoding',
-    'Response Time': None
+    'Box': 'one-hot-encoding',
+    'Neighborhooods - Analysis Boundaries': 'one-hot-encoding',
+    'Response Time': None,
+    'Station Area': 'one-hot-encoding',
+    'Unit sequence in call dispatch': 'one-hot-encoding',
+    'Unit Type': 'one-hot-encoding'
 }
 # set the columns we are using for this trial
 
@@ -54,7 +69,9 @@ results.append(status_string)
 
 working_path = "/Users/michelle/Data/CS504/Project/"
 set_prefixes = ['pre', 'in', 'post']
+# set_prefixes = ['post']
 dfs = { }
+
 
 for set_prefix in set_prefixes:
     stored_dataset_path = working_path + 'Data/' + set_prefix + '_lock_2018_2023.csv'
@@ -63,8 +80,7 @@ for set_prefix in set_prefixes:
     results.append(status_string)
     dfs[set_prefix] = pd.read_csv(stored_dataset_path, usecols=columns_for_trial)
 
-# set up response time as a timedelta
-for set_prefix in set_prefixes:
+    # set up response time as a timedelta
     status_string = f'Changing dependent variable timedelta to number of seconds for {set_prefix}\n'
     print(status_string)
     results.append(status_string)
@@ -84,8 +100,7 @@ for set_prefix in set_prefixes:
     print(status_string)
     results.append(status_string)
 
-# set up one hot encoding as necessary
-for set_prefix in set_prefixes:
+    # set up one hot encoding as necessary
     for column in columns_for_trial:
         if column_processing[column] == 'one-hot-encoding':
             column_prefix = column[0:4]
@@ -99,7 +114,6 @@ for set_prefix in set_prefixes:
             dfs[set_prefix] = dfs[set_prefix].join(one_hot_temp_df)
 
 
-for set_prefix in set_prefixes:
     status_string = f'Setting up variables for {set_prefix}\n'
     print(status_string)
     results.append(status_string)
